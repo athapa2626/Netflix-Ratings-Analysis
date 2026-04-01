@@ -1,6 +1,6 @@
 # Netflix Ratings Analysis
 
-A data analysis project exploring Netflix content ratings using R, combining Netflix catalog data with TMDB movie metadata.
+Investigating whether Netflix's rapid content expansion came at the cost of audience quality, using IMDb ratings merged with Netflix catalog data.
 
 ---
 
