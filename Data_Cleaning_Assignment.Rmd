@@ -1,0 +1,87 @@
+---
+title: "Data_Cleaning_Assignment"
+output: pdf_document
+date: "2026-04-01"
+---
+
+```{r}
+## 1. Data set overview
+# Reading data sets
+netflix_data <- read.csv("~/Netflix-Ratings-Analysis/Data/netflix_titles.csv")
+imdb_data <- read.csv("~/Netflix-Ratings-Analysis/Data/TMDB_all_movies.csv")
+
+# data overview
+head(netflix_data)
+str(netflix_data)
+summary(netflix_data)
+
+head(imdb_data)
+str(imdb_data)
+summary(imdb_data)
+
+# Notes
+# imdb_rating has 712327 missing values, def need to fix that.
+# netflix release year is int
+# imdb's release year is chr
+
+
+
+
+## 2. Variable 1 Cleaning: Cleaning Title and Year 
+#install.packages("dplyr")
+#install.packages("stringr")
+library(dplyr)
+library(stringr)
+
+# cleaning title
+netflix_clean <- netflix_data %>% 
+  mutate(title_clean = str_to_lower(title) %>%
+         str_trim() %>%
+         str_replace_all("[^a-z0-9 ]", "") %>%
+         str_squish())
+
+imdb_clean <- imdb_data %>% 
+  mutate(title_clean = str_to_lower(title) %>%
+         str_trim() %>%
+         str_replace_all("[^a-z0-9 ]", "") %>%
+         str_squish())
+
+# cleaning release year
+imdb_clean <- imdb_clean %>%
+  mutate(release_year = as.numeric(substr(release_date, 1, 4))) %>%
+  filter(!is.na(release_year),
+         release_year >= 1900,
+         release_year <= 2021)
+
+summary(netflix_clean$release_year)
+summary(imdb_clean$release_year)
+
+
+# Notes
+# we will be merging on title and release year so we need to clean those 2 cols before joining
+# str_to_lower(title) conveets all letters to lowercase
+# str_trim() removes extra spaces at the beginning and end
+# str_replace_all("[^a-z0-9 ]", "") removes everything that is not lowercase letters, numbers (0-9) or spaces. so just removes punctuations so that dosent interfere with the join.
+# str_squish()) remoes extra spaces between words
+# substr(release_date, 1, 4) takes first 4 characters so the year
+# as.numeric() will convert chr to int
+# after converting imdb's release year to int when i did summary i saw min year was 1874 and max year was 2069 so i limitied the clean release year to 1900-2021
+
+
+
+## 3. Variable 2 Cleaning: Cleaning imdb rating and votes
+imdb_clean <- imdb_clean %>%
+  filter(!is.na(imdb_rating),
+         !is.na(imdb_votes),
+         imdb_votes > 50)
+         
+# notes:
+# dropping imdb ratings and votes that are null and setting limit to imdb votes
+
+## 4. Variable 3 Cleaning: Merging the two dataset
+## 5. Before vs After Comparison
+## 6. Conclusion
+
+
+
+```
