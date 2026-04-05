@@ -1,14 +1,16 @@
 ---
 title: "Data_Cleaning_Assignment"
-output: pdf_document
+output: 
+  pdf_document:
+      latex_engine: xelatex
 date: "2026-04-01"
 ---
 
 ```{r}
 ## 1. Data set overview
 # Reading data sets
-netflix_data <- read.csv("~/Netflix-Ratings-Analysis/Data/netflix_titles.csv")
-imdb_data <- read.csv("~/Netflix-Ratings-Analysis/Data/TMDB_all_movies.csv")
+netflix_data <- read.csv("Data/netflix_titles.csv")
+imdb_data <- read.csv("Data/TMDB_all_movies.csv")
 
 # data overview
 head(netflix_data)
@@ -78,10 +80,52 @@ imdb_clean <- imdb_clean %>%
 # notes:
 # dropping imdb ratings and votes that are null and setting limit to imdb votes
 
-## 4. Variable 3 Cleaning: Merging the two dataset
+## 4. Variable 3 Cleaning: Merging the two datasets
+# We use an inner join to keep only the movies that exist in BOTH datasets
+merged_data <- inner_join(netflix_clean, imdb_clean, by = c("title_clean", "release_year"))
+
+# Removing any duplicate entries that may have occurred during the join
+merged_data <- merged_data %>% 
+  distinct(title_clean, release_year, .keep_all = TRUE)
+
+
 ## 5. Before vs After Comparison
-## 6. Conclusion
+# Installing ggplot2 for visualizations if not already installed
+# install.packages("ggplot2")
+library(ggplot2)
 
+# --- STATS & TABLES ---
+# Calculate rows before and after
+rows_before_netflix <- nrow(netflix_data)
+rows_before_imdb <- nrow(imdb_data)
+rows_after_merge <- nrow(merged_data)
 
+# Missing values in IMDB ratings before and after
+missing_ratings_before <- sum(is.na(imdb_data$imdb_rating))
+missing_ratings_after <- sum(is.na(merged_data$imdb_rating))
 
+# Create a clean summary table for the report
+comparison_table <- data.frame(
+  Metric = c("Total Netflix Rows", "Total IMDB Rows", "Merged Rows", "Missing IMDB Ratings"),
+  Before_Cleaning = c(rows_before_netflix, rows_before_imdb, "N/A", missing_ratings_before),
+  After_Cleaning = c("N/A", "N/A", rows_after_merge, missing_ratings_after)
+)
+
+# Print the table using knitr for a clean PDF look
+knitr::kable(comparison_table, caption = "Data Summary Before and After Cleaning")
+
+# --- VISUALIZATIONS ---
+# Boxplot comparing the distribution of IMDB ratings before vs after cleaning
+# We create a temporary dataframe just for the plot
+plot_data_before <- data.frame(Rating = imdb_data$imdb_rating, State = "Before Cleaning (Raw IMDB)")
+plot_data_after <- data.frame(Rating = merged_data$imdb_rating, State = "After Cleaning & Merging")
+plot_data <- rbind(plot_data_before[!is.na(plot_data_before$Rating), ], plot_data_after)
+
+ggplot(plot_data, aes(x = State, y = Rating, fill = State)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Distribution of IMDB Ratings Before and After Data Cleaning",
+       x = "Dataset State",
+       y = "IMDB Rating") +
+  theme(legend.position = "none")
 ```
