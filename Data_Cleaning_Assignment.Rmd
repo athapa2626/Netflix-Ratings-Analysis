@@ -6,8 +6,9 @@ output:
 date: "2026-04-01"
 ---
 
+# 1. Data set overview
 ```{r}
-## 1. Data set overview
+#install.packages("readr")
 library(readr)
 
 # Reading data sets
@@ -19,7 +20,7 @@ imdb_data <- read.csv("Data/TMDB_all_movies.csv")
 
 ```{r data overview}
 
-# data overview
+# initial exploration
 head(netflix_data)
 str(netflix_data)
 summary(netflix_data)
@@ -28,14 +29,11 @@ head(imdb_data)
 str(imdb_data)
 summary(imdb_data)
 
-# imdb_rating has 712327 missing values, def need to fix that.
-# netflix release year is int
-# imdb's release year is chr
-
 ```
 
-
-```{r var 1 cleaning}
+# 2. Variable Cleaning
+The title variable was cleaned to improve consistency between the two datasets and enable accurate merging. All titles were converted to lowercase, leading and trailing whitespace was removed, and special characters were stripped. This ensured that titles with minor formatting differences (like  punctuation or capitalization) would match correctly across datasets.
+```{r Title Variable Cleaning}
 
 ## 2. Variable 1 Cleaning: Cleaning Title and Year 
 library(dplyr)
@@ -54,6 +52,10 @@ imdb_clean <- imdb_data %>%
          str_replace_all("[^a-z0-9 ]", "") %>%
          str_squish())
 
+```
+
+The release year variable in the IMDb dataset was originally stored as a character string within the release_date field. We converted into a numeric format by extracting the year component. Observations with missing or unrealistic years (before 1900 or after 2021) were removed to ensure data accuracy and consistency with the Netflix dataset.
+```{r Release Year Variable Cleaning}
 # cleaning release year
 imdb_clean <- imdb_clean %>%
   mutate(release_year = as.numeric(substr(release_date, 1, 4))) %>%
@@ -64,28 +66,20 @@ imdb_clean <- imdb_clean %>%
 summary(netflix_clean$release_year)
 summary(imdb_clean$release_year)
 
+```
 
-# Notes
-# we will be merging on title and release year so we need to clean those 2 cols before joining
-# str_to_lower(title) conveets all letters to lowercase
-# str_trim() removes extra spaces at the beginning and end
-# str_replace_all("[^a-z0-9 ]", "") removes everything that is not lowercase letters, numbers (0-9) or spaces. so just removes punctuations so that dosent interfere with the join.
-# str_squish()) remoes extra spaces between words
-# substr(release_date, 1, 4) takes first 4 characters so the year
-# as.numeric() will convert chr to int
-# after converting imdb's release year to int when i did summary i saw min year was 1874 and max year was 2069 so i limitied the clean release year to 1900-2021
-
-
-
+Observations with missing IMDb ratings or vote counts were removed, as these values are essential for analysis. Additionally, Movies with fewer than 50 votes were removed to ensure that IMDb ratings reflect a sufficiently large audience consensus. Low vote counts can lead to unstable and biased ratings, which may distort analysis results. By applying this filter, the dataset better represents reliable measures of content quality, allowing for more accurate evaluation of Netflix’s content strategy and the factors influencing audience ratings.
+``` {r IMDB Rating and Votes Variable Cleaning}
 ## 3. Variable 2 Cleaning: Cleaning imdb rating and votes
 imdb_clean <- imdb_clean %>%
   filter(!is.na(imdb_rating),
          !is.na(imdb_votes),
          imdb_votes > 50)
-         
-# notes:
-# dropping imdb ratings and votes that are null and setting limit to imdb votes
+        
+```
 
+The cleaned Netflix and IMDb datasets were merged using an inner join on the cleaned title and release year variables. This ensured that only movies present in both datasets were retained. Duplicate entries resulting from the merge were removed to maintain a one-to-one mapping of observations.
+``` {r Merging the Datasets}
 ## 4. Variable 3 Cleaning: Merging the two datasets
 # We use an inner join to keep only the movies that exist in BOTH datasets
 merged_data <- inner_join(netflix_clean, imdb_clean, by = c("title_clean", "release_year"))
@@ -94,44 +88,122 @@ merged_data <- inner_join(netflix_clean, imdb_clean, by = c("title_clean", "rele
 merged_data <- merged_data %>% 
   distinct(title_clean, release_year, .keep_all = TRUE)
 
+```
 
-## 5. Before vs After Comparison
+# 3. Before vs After Comparison
+
+This subsection provides a concise comparison of key statistics for the IMDb ratings before and after cleaning. It includes the total number of rows, the count of missing IMDb ratings, and key descriptive statistics like mean, median, and standard deviation. This gives a numerical snapshot of how the cleaning affected the dataset size and rating distribution.
+```{r}
 # Installing ggplot2 for visualizations if not already installed
 # install.packages("ggplot2")
 library(ggplot2)
+library(dplyr)
+library(knitr)
 
-# --- STATS & TABLES ---
-# Calculate rows before and after
-rows_before_netflix <- nrow(netflix_data)
-rows_before_imdb <- nrow(imdb_data)
-rows_after_merge <- nrow(merged_data)
-
-# Missing values in IMDB ratings before and after
-missing_ratings_before <- sum(is.na(imdb_data$imdb_rating))
-missing_ratings_after <- sum(is.na(merged_data$imdb_rating))
-
-# Create a clean summary table for the report
+# --- Comparison of IMDB Data Before and After Cleaning ---
 comparison_table <- data.frame(
-  Metric = c("Total Netflix Rows", "Total IMDB Rows", "Merged Rows", "Missing IMDB Ratings"),
-  Before_Cleaning = c(rows_before_netflix, rows_before_imdb, "N/A", missing_ratings_before),
-  After_Cleaning = c("N/A", "N/A", rows_after_merge, missing_ratings_after)
+  Metric = c("Rows",
+             "Missing IMDB Ratings",
+             "Mean IMDB Rating",
+             "Median IMDB Rating",
+             "SD IMDB Rating"),
+  
+  Before = c(
+    nrow(imdb_data),
+    sum(is.na(imdb_data$imdb_rating)),
+    mean(imdb_data$imdb_rating, na.rm = TRUE),
+    median(imdb_data$imdb_rating, na.rm = TRUE),
+    sd(imdb_data$imdb_rating, na.rm = TRUE)
+  ),
+  
+  After = c(
+    nrow(merged_data),
+    sum(is.na(merged_data$imdb_rating)),
+    mean(merged_data$imdb_rating, na.rm = TRUE),
+    median(merged_data$imdb_rating, na.rm = TRUE),
+    sd(merged_data$imdb_rating, na.rm = TRUE)
+  )
 )
 
-# Print the table using knitr for a clean PDF look
-knitr::kable(comparison_table, caption = "Data Summary Before and After Cleaning")
+kable(comparison_table, digits = 2,
+      caption = "Comparison of IMDB Data Before and After Cleaning")
 
-# --- VISUALIZATIONS ---
-# Boxplot comparing the distribution of IMDB ratings before vs after cleaning
-# We create a temporary dataframe just for the plot
-plot_data_before <- data.frame(Rating = imdb_data$imdb_rating, State = "Before Cleaning (Raw IMDB)")
-plot_data_after <- data.frame(Rating = merged_data$imdb_rating, State = "After Cleaning & Merging")
-plot_data <- rbind(plot_data_before[!is.na(plot_data_before$Rating), ], plot_data_after)
+```
 
+This part examines the extent of missing data in all variables before and after cleaning. It confirms the improvement in data completeness and highlights the variables where cleaning had the biggest impact.
+``` {r}
+# --- Missing values overview ---
+# Missing values before cleaning
+missing_before <- colSums(is.na(imdb_data))
+
+# Missing values after cleaning
+missing_after <- colSums(is.na(merged_data))
+
+missing_before
+missing_after
+
+```
+
+Here we visually compare the distributions of IMDb ratings before and after cleaning. The boxplot highlights changes in spread and outliers, while the side-by-side histograms show how the frequency distribution of ratings has shifted.
+```{r}
+# --- Visualizations ---
+# Prepare data for plotting
+plot_data_before <- data.frame(
+  Rating = imdb_data$imdb_rating,
+  State = "Before Cleaning"
+)
+
+plot_data_after <- data.frame(
+  Rating = merged_data$imdb_rating,
+  State = "After Cleaning"
+)
+
+plot_data <- rbind(
+  plot_data_before[!is.na(plot_data_before$Rating), ],
+  plot_data_after
+)
+
+# --- Boxplot ---
 ggplot(plot_data, aes(x = State, y = Rating, fill = State)) +
   geom_boxplot() +
   theme_minimal() +
-  labs(title = "Distribution of IMDB Ratings Before and After Data Cleaning",
-       x = "Dataset State",
+  labs(title = "IMDB Rating Distribution Before and After Cleaning",
+       x = "Dataset",
        y = "IMDB Rating") +
   theme(legend.position = "none")
+
+# --- Histogram (Side-by-Side) ---
+ggplot(plot_data, aes(x = Rating, fill = State)) +
+  geom_histogram(bins = 30, color = "black") +
+  facet_wrap(~State) +
+  theme_minimal() +
+  labs(title = "IMDB Ratings Before vs After Cleaning",
+       x = "IMDB Rating",
+       y = "Count") +
+  theme(legend.position = "none")
+
 ```
+
+Finally, this subsection examines the distribution of IMDb votes on a logarithmic scale before and after cleaning. This visualization reveals the wide variation in movie popularity and how filtering has reduced low-vote entries.
+```{r}
+# --- Votes Distribution (Log Scale) ---
+plot_votes_before <- data.frame(
+  Votes = imdb_data$imdb_votes,
+  State = "Before"
+)
+
+plot_votes_after <- data.frame(
+  Votes = merged_data$imdb_votes,
+  State = "After"
+)
+
+plot_votes <- rbind(plot_votes_before, plot_votes_after)
+
+ggplot(plot_votes, aes(x = Votes, fill = State)) +
+  geom_histogram(bins = 30) +
+  scale_x_log10() +
+  facet_wrap(~State) +
+  theme_minimal()
+
+```
+
