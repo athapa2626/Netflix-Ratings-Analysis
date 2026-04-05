@@ -31,15 +31,15 @@ summary(imdb_data)
 
 ```
 
-# 2. Variable Cleaning
-The title variable was cleaned to improve consistency between the two datasets and enable accurate merging. All titles were converted to lowercase, leading and trailing whitespace was removed, and special characters were stripped. This ensured that titles with minor formatting differences (like  punctuation or capitalization) would match correctly across datasets.
-```{r Title Variable Cleaning}
+# 2. Cleaning Process
 
-## 2. Variable 1 Cleaning: Cleaning Title and Year 
+## 2.1 Title Variable Cleaning
+The title variable was cleaned to improve consistency between the two datasets and enable accurate merging. All titles were converted to lowercase, leading and trailing whitespace was removed, and special characters were stripped. This ensured that titles with minor formatting differences (like  punctuation or capitalization) would match correctly across datasets.
+
+```{r}
 library(dplyr)
 library(stringr)
 
-# cleaning title
 netflix_clean <- netflix_data %>% 
   mutate(title_clean = str_to_lower(title) %>%
          str_trim() %>%
@@ -54,9 +54,9 @@ imdb_clean <- imdb_data %>%
 
 ```
 
+## 2.2 Release Year Variable Cleaning
 The release year variable in the IMDb dataset was originally stored as a character string within the release_date field. We converted into a numeric format by extracting the year component. Observations with missing or unrealistic years (before 1900 or after 2021) were removed to ensure data accuracy and consistency with the Netflix dataset.
-```{r Release Year Variable Cleaning}
-# cleaning release year
+```{r}
 imdb_clean <- imdb_clean %>%
   mutate(release_year = as.numeric(substr(release_date, 1, 4))) %>%
   filter(!is.na(release_year),
@@ -68,9 +68,9 @@ summary(imdb_clean$release_year)
 
 ```
 
+## 2.3 IMDB Rating and Votes Variable Cleaning
 Observations with missing IMDb ratings or vote counts were removed, as these values are essential for analysis. Additionally, Movies with fewer than 50 votes were removed to ensure that IMDb ratings reflect a sufficiently large audience consensus. Low vote counts can lead to unstable and biased ratings, which may distort analysis results. By applying this filter, the dataset better represents reliable measures of content quality, allowing for more accurate evaluation of Netflix’s content strategy and the factors influencing audience ratings.
-``` {r IMDB Rating and Votes Variable Cleaning}
-## 3. Variable 2 Cleaning: Cleaning imdb rating and votes
+``` {r}
 imdb_clean <- imdb_clean %>%
   filter(!is.na(imdb_rating),
          !is.na(imdb_votes),
@@ -78,8 +78,9 @@ imdb_clean <- imdb_clean %>%
         
 ```
 
+## 2.4 Merging the Datasets
 The cleaned Netflix and IMDb datasets were merged using an inner join on the cleaned title and release year variables. This ensured that only movies present in both datasets were retained. Duplicate entries resulting from the merge were removed to maintain a one-to-one mapping of observations.
-``` {r Merging the Datasets}
+``` {r}
 ## 4. Variable 3 Cleaning: Merging the two datasets
 # We use an inner join to keep only the movies that exist in BOTH datasets
 merged_data <- inner_join(netflix_clean, imdb_clean, by = c("title_clean", "release_year"))
@@ -90,8 +91,7 @@ merged_data <- merged_data %>%
 
 ```
 
-# 3. Before vs After Comparison
-
+# 3. Summarization Before and After Cleaning
 This subsection provides a concise comparison of key statistics for the IMDb ratings before and after cleaning. It includes the total number of rows, the count of missing IMDb ratings, and key descriptive statistics like mean, median, and standard deviation. This gives a numerical snapshot of how the cleaning affected the dataset size and rating distribution.
 ```{r}
 # Installing ggplot2 for visualizations if not already installed
