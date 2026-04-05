@@ -8,9 +8,16 @@ date: "2026-04-01"
 
 ```{r}
 ## 1. Data set overview
+library(readr)
+
 # Reading data sets
 netflix_data <- read.csv("Data/netflix_titles.csv")
 imdb_data <- read.csv("Data/TMDB_all_movies.csv")
+
+```
+
+
+```{r data overview}
 
 # data overview
 head(netflix_data)
@@ -21,17 +28,16 @@ head(imdb_data)
 str(imdb_data)
 summary(imdb_data)
 
-# Notes
 # imdb_rating has 712327 missing values, def need to fix that.
 # netflix release year is int
 # imdb's release year is chr
 
+```
 
 
+```{r var 1 cleaning}
 
 ## 2. Variable 1 Cleaning: Cleaning Title and Year 
-#install.packages("dplyr")
-#install.packages("stringr")
 library(dplyr)
 library(stringr)
 
