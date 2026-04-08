@@ -210,7 +210,7 @@ ggplot(plot_data, aes(x = State, y = Rating, fill = State)) +
        y = "IMDB Rating") +
   theme(legend.position = "none")
 
-# --- Histogram (Side-by-Side) ---
+# --- Density Plot (Side-by-Side) ---
 ggplot(plot_data, aes(x = Rating, fill = State)) +
   geom_histogram(aes(y = ..density..),
                  bins = 30,
@@ -239,7 +239,7 @@ plot_votes <- bind_rows(
 ) %>%
   filter(imdb_votes > 0) # Log scale can't handle 0 or negative numbers
 
-# Create plot 
+# --- Density Plot (Side-by-Side) ---
 ggplot(plot_votes, aes(x = imdb_votes, fill = State)) +
   geom_histogram(aes(y = ..density..),
                  bins = 30,
