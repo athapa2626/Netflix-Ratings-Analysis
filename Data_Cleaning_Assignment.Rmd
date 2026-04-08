@@ -22,20 +22,24 @@ imdb_data <- read.csv("Data/TMDB_all_movies.csv")
 ```{r data overview}
 
 # initial exploration
-head(netflix_data)
+#head(netflix_data)
 str(netflix_data)
-summary(netflix_data)
+#summary(netflix_data)
 
-head(imdb_data)
+#head(imdb_data)
 str(imdb_data)
-summary(imdb_data)
+#summary(imdb_data)
 
 ```
 
 # 2. Cleaning Process
 
 ## 2.1 Title Variable Cleaning
-The title variable was cleaned to improve consistency between the two datasets and enable accurate merging. All titles were converted to lowercase, leading and trailing whitespace was removed, and special characters were stripped. This ensured that titles with minor formatting differences (like  punctuation or capitalization) would match correctly across datasets.
+The title variable was cleaned to improve consistency between the two datasets 
+and enable accurate merging. All titles were converted to lowercase, 
+leading and trailing whitespace was removed, and special characters were stripped. 
+This ensured that titles with minor formatting differences 
+(e.g. punctuation or capitalization) would match correctly across datasets.
 
 ```{r}
 library(dplyr)
@@ -55,8 +59,14 @@ imdb_clean <- imdb_data %>%
 
 ```
 
+
 ## 2.2 Release Year Variable Cleaning
-The release year variable in the IMDb dataset was originally stored as a character string within the release_date field. We converted into a numeric format by extracting the year component. Observations with missing or unrealistic years (before 1900 or after 2021) were removed to ensure data accuracy and consistency with the Netflix dataset.
+The release year variable in the IMDb dataset was originally stored as a 
+character string within the release_date field. We converted into a numeric format 
+by extracting the year component. Observations with years outside the scope of our 
+study were removed to ensure data accuracy and consistency with the Netflix dataset.
+
+
 ```{r}
 imdb_clean <- imdb_clean %>%
   mutate(release_year = as.numeric(substr(release_date, 1, 4))) %>%
@@ -64,13 +74,21 @@ imdb_clean <- imdb_clean %>%
          release_year >= 1900,
          release_year <= 2021)
 
-summary(netflix_clean$release_year)
-summary(imdb_clean$release_year)
+range(imdb_clean$release_year)
+
+#summary(netflix_clean$release_year)
+#summary(imdb_clean$release_year)
 
 ```
 
+
 ## 2.3 IMDB Rating and Votes Variable Cleaning
-Observations with missing IMDb ratings or vote counts were removed, as these values are essential for analysis. Additionally, Movies with fewer than 50 votes were removed to ensure that IMDb ratings reflect a sufficiently large audience consensus. Low vote counts can lead to unstable and biased ratings, which may distort analysis results. By applying this filter, the dataset better represents reliable measures of content quality, allowing for more accurate evaluation of Netflix’s content strategy and the factors influencing audience ratings.
+Observations with missing IMDb ratings or vote counts were removed. 
+Additionally, Movies with fewer than 50 votes were removed to ensure that IMDb 
+ratings reflect a sufficiently large audience consensus. Low vote counts can lead to 
+unstable and biased ratings, which may distort analysis results. 
+
+
 ``` {r}
 imdb_clean <- imdb_clean %>%
   filter(!is.na(imdb_rating),
@@ -80,23 +98,33 @@ imdb_clean <- imdb_clean %>%
 ```
 
 ## 2.4 Merging the Datasets
-The cleaned Netflix and IMDb datasets were merged using an inner join on the cleaned title and release year variables. This ensured that only movies present in both datasets were retained. Duplicate entries resulting from the merge were removed to maintain a one-to-one mapping of observations.
+Duplicate entries were first removed to maintain a one-to-one mapping of observations.
+The cleaned Netflix and IMDb data sets were merged using an inner join on the 
+cleaned title and release year variables. Release year was used due to the 
+occurrence of remakes. This process ensured that only movies present 
+in both datasets were retained.  
+
+
 ``` {r}
 ## 4. Variable 3 Cleaning: Merging the two datasets
-# We use an inner join to keep only the movies that exist in BOTH datasets
-merged_data <- inner_join(netflix_clean, imdb_clean, by = c("title_clean", "release_year"))
 
-# Removing any duplicate entries that may have occurred during the join
-merged_data <- merged_data %>% 
-  distinct(title_clean, release_year, .keep_all = TRUE)
+# Clean both datasets first
+netflix_unique <- netflix_clean %>% distinct(title_clean, release_year, .keep_all = TRUE)
+imdb_unique <- imdb_clean %>% distinct(title_clean, release_year, .keep_all = TRUE)
+
+# Join the unique data
+merged_data <- inner_join(netflix_unique, imdb_unique, by = c("title_clean", "release_year"))
 
 ```
 
 # 3. Summarization Before and After Cleaning
-This subsection provides a concise comparison of key statistics for the IMDb ratings before and after cleaning. It includes the total number of rows, the count of missing IMDb ratings, and key descriptive statistics like mean, median, and standard deviation. This gives a numerical snapshot of how the cleaning affected the dataset size and rating distribution.
+Comparison of key statistics for the IMDb ratings before and after cleaning, including 
+the total number of rows, the count of missing IMDb ratings, and key descriptive 
+statistics like mean, median, and standard deviation. This gives a numerical 
+snapshot of how the cleaning affected the dataset size and rating distribution.
+
+
 ```{r}
-# Installing ggplot2 for visualizations if not already installed
-# install.packages("ggplot2")
 library(ggplot2)
 library(dplyr)
 library(knitr)
@@ -131,9 +159,12 @@ kable(comparison_table, digits = 2,
 
 ```
 
-This part examines the extent of missing data in all variables before and after cleaning. It confirms the improvement in data completeness and highlights the variables where cleaning had the biggest impact.
+This part examines the extent of missing data in all variables before and after 
+cleaning, and highlights the variables where cleaning had the biggest impact.
+
 ``` {r}
 # --- Missing values overview ---
+
 # Missing values before cleaning
 missing_before <- colSums(is.na(imdb_data))
 
@@ -145,7 +176,12 @@ missing_after
 
 ```
 
-Here we visually compare the distributions of IMDb ratings before and after cleaning. The boxplot highlights changes in spread and outliers, while the side-by-side histograms show how the frequency distribution of ratings has shifted.
+
+Here we visually compare the distributions of IMDb ratings before and after cleaning. 
+The boxplot highlights changes in spread and outliers, while the side-by-side 
+histograms show how the frequency distribution of ratings has shifted.
+
+
 ```{r}
 # --- Visualizations ---
 # Prepare data for plotting
@@ -185,26 +221,24 @@ ggplot(plot_data, aes(x = Rating, fill = State)) +
 
 ```
 
-Finally, this subsection examines the distribution of IMDb votes on a logarithmic scale before and after cleaning. This visualization reveals the wide variation in movie popularity and how filtering has reduced low-vote entries.
-```{r}
-# --- Votes Distribution (Log Scale) ---
-plot_votes_before <- data.frame(
-  Votes = imdb_data$imdb_votes,
-  State = "Before"
-)
+Finally, this subsection examines the distribution of IMDb votes on a 
+logarithmic scale before and after cleaning. This visualization reveals the 
+wide variation in movie popularity and how filtering has reduced low-vote entries.
 
-plot_votes_after <- data.frame(
-  Votes = merged_data$imdb_votes,
-  State = "After"
-)
+```{r distributions}
 
-plot_votes <- rbind(plot_votes_before, plot_votes_after)
+# Combine and filter 0s/NAs 
+plot_votes <- bind_rows(
+  mutate(imdb_data, State = "Before"),
+  mutate(merged_data, State = "After")
+) %>%
+  filter(imdb_votes > 0) # Log scale can't handle 0 or negative numbers
 
-ggplot(plot_votes, aes(x = Votes, fill = State)) +
-  geom_histogram(bins = 30) +
-  scale_x_log10() +
+# Create plot 
+ggplot(plot_votes, aes(x = imdb_votes, fill = State)) +
+  geom_histogram(bins = 30, color = "white") +
+  scale_x_log10(labels = function(x) format(x, scientific = FALSE, big.mark = ",")) +
   facet_wrap(~State) +
   theme_minimal()
 
 ```
-
