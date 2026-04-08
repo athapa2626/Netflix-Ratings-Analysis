@@ -118,6 +118,8 @@ merged_data <- inner_join(netflix_unique, imdb_unique, by = c("title_clean", "re
 ```
 
 # 3. Summarization Before and After Cleaning
+
+## 3.1 Summary Statistics Comparison
 Comparison of key statistics for the IMDb ratings before and after cleaning, including 
 the total number of rows, the count of missing IMDb ratings, and key descriptive 
 statistics like mean, median, and standard deviation. This gives a numerical 
@@ -159,6 +161,7 @@ kable(comparison_table, digits = 2,
 
 ```
 
+## 3.2 Missing Values Analysis
 This part examines the extent of missing data in all variables before and after 
 cleaning, and highlights the variables where cleaning had the biggest impact.
 
@@ -176,10 +179,8 @@ missing_after
 
 ```
 
-
-Here we visually compare the distributions of IMDb ratings before and after cleaning. 
-The boxplot highlights changes in spread and outliers, while the side-by-side 
-histograms show how the frequency distribution of ratings has shifted.
+## 3.3 IMDB Rating Distribution
+Here we visually compare the distributions of IMDb ratings before and after cleaning. The boxplot highlights changes in spread and potential outliers, while the density plots show the overall shape of the rating distributions. Using density instead of raw counts allows for meaningful comparison between datasets of different sizes.
 
 
 ```{r}
@@ -211,19 +212,23 @@ ggplot(plot_data, aes(x = State, y = Rating, fill = State)) +
 
 # --- Histogram (Side-by-Side) ---
 ggplot(plot_data, aes(x = Rating, fill = State)) +
-  geom_histogram(bins = 30, color = "black") +
+  geom_histogram(aes(y = ..density..),
+                 bins = 30,
+                 color = "black",
+                 alpha = 0.6) +
   facet_wrap(~State) +
   theme_minimal() +
   labs(title = "IMDB Ratings Before vs After Cleaning",
        x = "IMDB Rating",
-       y = "Count") +
+       y = "Density") +
   theme(legend.position = "none")
 
 ```
 
-Finally, this subsection examines the distribution of IMDb votes on a 
-logarithmic scale before and after cleaning. This visualization reveals the 
-wide variation in movie popularity and how filtering has reduced low-vote entries.
+## 3.4 IMDB Votes Distribution
+This subsection compares the distribution of IMDb votes on a logarithmic scale before and after cleaning. 
+Density-based histograms are used so the two datasets can be compared fairly despite different sizes. 
+The log scale highlights the wide range in movie popularity, and the cleaned data shows fewer low-vote movies, focusing more on films with higher audience engagement.
 
 ```{r distributions}
 
@@ -236,9 +241,16 @@ plot_votes <- bind_rows(
 
 # Create plot 
 ggplot(plot_votes, aes(x = imdb_votes, fill = State)) +
-  geom_histogram(bins = 30, color = "white") +
+  geom_histogram(aes(y = ..density..),
+                 bins = 30,
+                 color = "white",
+                 alpha = 0.6) +
   scale_x_log10(labels = function(x) format(x, scientific = FALSE, big.mark = ",")) +
   facet_wrap(~State) +
-  theme_minimal()
+  theme_minimal() +
+  labs(title = "Distribution of IMDb Votes (Log Scale)",
+       x = "IMDb Votes (log scale)",
+       y = "Density") +
+  theme(legend.position = "none")
 
 ```
