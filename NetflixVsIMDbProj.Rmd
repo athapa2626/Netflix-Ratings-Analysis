@@ -1,0 +1,154 @@
+---
+title: "Netflix vs IMDb Quality Analysis"
+author: "Meghana Mandadi, Amrita Thapa, and Thomas Zeller"
+date: "4/23/2026"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: '2'
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(knitr)
+```
+
+```{r load-data, include=FALSE}
+# --- Data cleaning setup (from Data_Cleaning_Assignment.Rmd) ---
+# Produces `merged_data` used by all analysis sections below.
+
+# Read raw data
+netflix_data <- read.csv("Data/netflix_titles.csv")
+imdb_data <- read.csv("Data/TMDB_all_movies.csv")
+
+# Title cleaning
+netflix_clean <- netflix_data %>% 
+  mutate(title_clean = str_to_lower(title) %>%
+         str_trim() %>%
+         str_replace_all("[^a-z0-9 ]", "") %>%
+         str_squish())
+
+imdb_clean <- imdb_data %>% 
+  mutate(title_clean = str_to_lower(title) %>%
+         str_trim() %>%
+         str_replace_all("[^a-z0-9 ]", "") %>%
+         str_squish())
+
+# Release year cleaning
+imdb_clean <- imdb_clean %>%
+  mutate(release_year = as.numeric(substr(release_date, 1, 4))) %>%
+  filter(!is.na(release_year),
+         release_year >= 1900,
+         release_year <= 2021)
+
+# IMDb rating and votes cleaning
+imdb_clean <- imdb_clean %>%
+  filter(!is.na(imdb_rating),
+         !is.na(imdb_votes),
+         imdb_votes > 50)
+
+# Merge datasets
+netflix_unique <- netflix_clean %>% distinct(title_clean, release_year, .keep_all = TRUE)
+imdb_unique    <- imdb_clean    %>% distinct(title_clean, release_year, .keep_all = TRUE)
+
+merged_data <- inner_join(netflix_unique, imdb_unique, by = c("title_clean", "release_year"))
+```
+
+---
+
+# 1. Macro Trends: Quantity vs. Quality Over Time
+
+## 1.1 How does the total volume of content added to the platform in a specific year correlate with the average IMDb score of that year's cohort?
+
+*Visualization: Dual-Axis Line Chart or Scatter Plot with Trend Line — each point represents a year, showing the relationship between volume of content added and average IMDb rating for that cohort.*
+
+```{r q1-volume-vs-quality}
+
+```
+
+## 1.2 Has the average IMDb rating of Netflix's content increased or decreased over the last decade as their production volume rapidly expanded?
+
+*Visualization: Time Series Line Chart — `geom_line()` + `geom_smooth(method = "lm")` to show the overall slope of IMDb ratings by year.*
+
+```{r q2-rating-trend-over-time}
+
+```
+
+---
+
+# 2. Format & Genre: What Is Being Produced and How Does Quality Vary?
+
+## 2.1 Is there a statistically significant difference in average IMDb ratings between Netflix movies and Netflix TV shows?
+
+*Visualization: Box Plot or Violin Plot — `geom_boxplot(aes(x = type, y = imdb_rating))` to show median and spread (IQR) by content type.*
+
+```{r q3-movies-vs-shows}
+
+```
+
+## 2.2 Which specific content categories (e.g., Documentaries, Stand-Up Comedy, Action) maintain the highest average IMDb ratings on the platform?
+
+*Visualization: Reordered Horizontal Bar Chart — `geom_col()` with `fct_reorder()` to sort genres from highest to lowest average rating.*
+
+```{r q4-ratings-by-genre}
+
+```
+
+## 2.3 Is there a correlation between a movie's runtime (duration) and its overall IMDb score?
+
+*Visualization: Scatter Plot with Trend Line — each point is a movie, with runtime on the x-axis and IMDb rating on the y-axis.*
+
+```{r q5-runtime-vs-rating}
+
+```
+
+---
+
+# 3. Strategic Factors & Specific Predictors
+
+## 3.1 Do international productions (content produced outside the United States) generally score higher on IMDb than US-based productions?
+
+*Visualization: Box Plot or Bar Chart — compare average IMDb ratings between US and non-US productions.*
+
+```{r q6-international-vs-domestic}
+
+```
+
+## 3.2 Which top five producing countries have the highest average IMDb ratings for their exported Netflix content?
+
+*Visualization: Horizontal Bar Chart — top 5 countries ranked by average IMDb rating, filtered to countries with a minimum number of titles.*
+
+```{r q7-top-countries-by-rating}
+
+```
+
+## 3.3 Does the maturity rating (e.g., TV-MA vs. TV-PG) have a strong correlation with the overall IMDb score or the total number of IMDb votes?
+
+*Visualization: Box Plot or Grouped Bar Chart — IMDb rating and/or vote count broken down by maturity rating category.*
+
+```{r q8-maturity-rating-vs-score}
+
+```
+
+## 3.4 Do shows or movies with a larger ensemble cast (based on the number of actors listed) tend to receive a higher volume of IMDb votes?
+
+*Visualization: Scatter Plot with Trend Line — cast size on the x-axis, IMDb votes on the y-axis (log scale recommended).*
+
+```{r q9-cast-size-vs-votes}
+
+```
+
+## 3.5 Do older, licensed movies (titles added to Netflix years after release) perform better in IMDb ratings than brand-new, same-year releases?
+
+*Visualization: Box Plot or Density Plot — compare IMDb ratings between same-year releases and titles added significantly after their release year.*
+
+```{r q10-licensed-vs-originals}
+
+```
