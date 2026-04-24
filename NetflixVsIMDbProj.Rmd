@@ -18,7 +18,6 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 library(knitr)
-
 # theme colors: olivedrab, sienna
 ```
 
@@ -192,19 +191,61 @@ ggplot(decade_analysis, aes(x = year_added, y = content_volume)) +
 ```
 
 ## 2.2 Which specific content categories (e.g., Documentaries, Stand-Up Comedy, Action) maintain the highest average IMDb ratings on the platform?
-
-*Visualization: Reordered Horizontal Bar Chart — `geom_col()` with `fct_reorder()` to sort genres from highest to lowest average rating.*
-
 ```{r q4-ratings-by-genre}
+# Split genres
+genre_split <- strsplit(as.character(merged_data$listed_in), ",")
 
+# Expand into long format
+genre_data <- data.frame(
+  genre = trimws(unlist(genre_split)),
+  imdb_rating = rep(merged_data$imdb_rating, lengths(genre_split))
+)
+
+# Remove missing ratings
+genre_data <- genre_data[!is.na(genre_data$imdb_rating), ]
+
+# Summarize
+genre_summary <- genre_data %>%
+  group_by(genre) %>%
+  summarize(
+    avg_rating = mean(imdb_rating, na.rm = TRUE),
+    count = n()
+  ) %>%
+  filter(count >= 30) %>%
+  arrange(desc(avg_rating))
+
+ggplot(genre_summary, aes(x = reorder(genre, avg_rating), y = avg_rating)) +
+  geom_col(fill = "olivedrab", alpha = 0.8) +
+  coord_flip() +
+  labs(
+    title = "Average IMDb Ratings by Genre (n ≥ 30)",
+    x = "Genre",
+    y = "Average IMDb Rating"
+  ) +
+  theme_minimal()
 ```
 
 ## 2.3 Is there a correlation between a movie's runtime (duration) and its overall IMDb score?
-
-*Visualization: Scatter Plot with Trend Line — each point is a movie, with runtime on the x-axis and IMDb rating on the y-axis.*
-
 ```{r q5-runtime-vs-rating}
+# clean runtime movies only
+movie_data <- merged_data %>%
+  filter(type == "Movie") %>%
+  mutate(
+    runtime = as.numeric(str_extract(duration, "\\d+"))
+  ) %>%
+  filter(!is.na(runtime), !is.na(imdb_rating))
 
+cor(movie_data$runtime, movie_data$imdb_rating)
+
+ggplot(movie_data, aes(x = runtime, y = imdb_rating)) +
+  geom_point(alpha = 0.3, color = "olivedrab") +
+  geom_smooth(method = "lm", color = "sienna", se = FALSE) +
+  labs(
+    title = "Relationship Between Movie Runtime and IMDb Rating",
+    x = "Runtime (minutes)",
+    y = "IMDb Rating"
+  ) +
+  theme_minimal()
 ```
 
 ---
@@ -212,11 +253,36 @@ ggplot(decade_analysis, aes(x = year_added, y = content_volume)) +
 # 3. Strategic Factors & Specific Predictors
 
 ## 3.1 Do international productions (content produced outside the United States) generally score higher on IMDb than US-based productions?
-
-*Visualization: Box Plot or Bar Chart — compare average IMDb ratings between US and non-US productions.*
-
 ```{r q6-international-vs-domestic}
+# us vs international variable
+country_data <- merged_data %>%
+  filter(!is.na(country), !is.na(imdb_rating)) %>%
+  mutate(
+    origin = ifelse(str_detect(country, "United States"),
+                    "US Production",
+                    "International Production")
+  )
 
+# averages
+country_data %>%
+  group_by(origin) %>%
+  summarize(
+    avg_rating = mean(imdb_rating, na.rm = TRUE),
+    count = n()
+  )
+
+t.test(imdb_rating ~ origin, data = country_data)
+
+ggplot(country_data, aes(x = origin, y = imdb_rating, fill = origin)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = c("US Production" = "olivedrab",
+                               "International Production" = "sienna")) +
+  labs(
+    title = "IMDb Ratings: US vs International Productions",
+    x = "Production Origin",
+    y = "IMDb Rating"
+  ) +
+  theme_minimal()
 ```
 
 ## 3.2 Which top five producing countries have the highest average IMDb ratings for their exported Netflix content?
