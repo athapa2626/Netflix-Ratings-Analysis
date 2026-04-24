@@ -6,6 +6,7 @@ output:
   pdf_document:
     toc: true
     toc_depth: '2'
+    latex_engine: xelatex
   html_document:
     toc: true
     toc_depth: 2
@@ -284,7 +285,42 @@ ggplot(country_data, aes(x = origin, y = imdb_rating, fill = origin)) +
 *Visualization: Horizontal Bar Chart — top 5 countries ranked by average IMDb rating, filtered to countries with a minimum number of titles.*
 
 ```{r q7-top-countries-by-rating}
+# Split country field (titles can list multiple producing countries)
+country_split <- strsplit(as.character(merged_data$country), ",")
 
+# Expand into long format so each country gets its own row
+country_long <- data.frame(
+  country = trimws(unlist(country_split)),
+  imdb_rating = rep(merged_data$imdb_rating, lengths(country_split))
+)
+
+# Remove missing ratings and blank country entries
+country_long <- country_long %>%
+  filter(!is.na(imdb_rating), country != "")
+
+# Summarize: require a reasonable sample size so averages aren't driven by a handful of titles
+top_countries <- country_long %>%
+  group_by(country) %>%
+  summarize(
+    avg_rating = mean(imdb_rating, na.rm = TRUE),
+    count = n()
+  ) %>%
+  filter(count >= 30) %>%   # ADJUST THIS
+  arrange(desc(avg_rating)) %>%
+  slice_head(n = 5)
+
+ggplot(top_countries, aes(x = reorder(country, avg_rating), y = avg_rating)) +
+  geom_col(fill = "olivedrab", alpha = 0.8) +
+  geom_text(aes(label = round(avg_rating, 2)),
+            hjust = -0.2, color = "sienna", size = 3.5) +
+  coord_flip() +
+  labs(
+    title = "Top 5 Producing Countries by Average IMDb Rating",
+    subtitle = "Filtered to countries with at least 30 Netflix titles",
+    x = "Country",
+    y = "Average IMDb Rating"
+  ) +
+  theme_minimal()
 ```
 
 ## 3.3 Does the maturity rating (e.g., TV-MA vs. TV-PG) have a strong correlation with the overall IMDb score or the total number of IMDb votes?
@@ -292,7 +328,56 @@ ggplot(country_data, aes(x = origin, y = imdb_rating, fill = origin)) +
 *Visualization: Box Plot or Grouped Bar Chart — IMDb rating and/or vote count broken down by maturity rating category.*
 
 ```{r q8-maturity-rating-vs-score}
+# Clean maturity rating field and drop rare / non-standard categories
+maturity_data <- merged_data %>%
+  filter(!is.na(rating), rating != "", !is.na(imdb_rating), !is.na(imdb_votes)) %>%
+  # Keep only the common Netflix maturity categories so the plot isn't cluttered
+  filter(rating %in% c("G", "PG", "PG-13", "R", "NC-17",
+                       "TV-Y", "TV-Y7", "TV-G", "TV-PG", "TV-14", "TV-MA"))
 
+# Order ratings roughly from most family-friendly to most mature
+rating_order <- c("TV-Y", "TV-Y7", "TV-G", "G", "PG", "TV-PG",
+                  "PG-13", "TV-14", "R", "NC-17", "TV-MA")
+maturity_data$rating <- factor(maturity_data$rating, levels = rating_order)
+
+# Summary: average rating and vote count per maturity category
+maturity_data %>%
+  group_by(rating) %>%
+  summarize(
+    avg_rating = mean(imdb_rating, na.rm = TRUE),
+    avg_votes = mean(imdb_votes, na.rm = TRUE),
+    count = n()
+  )
+
+# Box plot: IMDb rating distribution by maturity category
+ggplot(maturity_data, aes(x = rating, y = imdb_rating, fill = rating)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.shape = 1) +
+  labs(
+    title = "IMDb Rating Distribution by Maturity Category",
+    subtitle = "Does audience targeting correspond to quality?",
+    x = "Maturity Rating",
+    y = "IMDb Rating"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 30, hjust = 1))
+
+# Bar chart: average IMDb votes per maturity category (log scale since votes span orders of magnitude)
+maturity_votes <- maturity_data %>%
+  group_by(rating) %>%
+  summarize(avg_votes = mean(imdb_votes, na.rm = TRUE))
+
+ggplot(maturity_votes, aes(x = rating, y = avg_votes)) +
+  geom_col(fill = "sienna", alpha = 0.8) +
+  scale_y_log10() +
+  labs(
+    title = "Average IMDb Votes by Maturity Category",
+    subtitle = "Log scale — reflects audience engagement, not quality",
+    x = "Maturity Rating",
+    y = "Average IMDb Votes (log scale)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
 ```
 
 ## 3.4 Do shows or movies with a larger ensemble cast (based on the number of actors listed) tend to receive a higher volume of IMDb votes?
@@ -300,7 +385,27 @@ ggplot(country_data, aes(x = origin, y = imdb_rating, fill = origin)) +
 *Visualization: Scatter Plot with Trend Line — cast size on the x-axis, IMDb votes on the y-axis (log scale recommended).*
 
 ```{r q9-cast-size-vs-votes}
+# Count number of cast members listed (comma-separated in cast.x from Netflix data)
+cast_data <- merged_data %>%
+  filter(!is.na(cast.x), cast.x != "", !is.na(imdb_votes), imdb_votes > 0) %>%
+  mutate(
+    cast_size = lengths(strsplit(as.character(cast.x), ","))
+  )
 
+# Correlation between cast size and vote count (use log votes since it's heavily skewed)
+cor(cast_data$cast_size, log10(cast_data$imdb_votes))
+
+ggplot(cast_data, aes(x = cast_size, y = imdb_votes)) +
+  geom_point(alpha = 0.3, color = "olivedrab") +
+  geom_smooth(method = "lm", color = "sienna", se = FALSE) +
+  scale_y_log10(labels = function(x) format(x, scientific = FALSE, big.mark = ",")) +
+  labs(
+    title = "Cast Size vs. IMDb Votes",
+    subtitle = "Does a bigger ensemble attract more audience engagement?",
+    x = "Number of Cast Members Listed",
+    y = "IMDb Votes (log scale)"
+  ) +
+  theme_minimal()
 ```
 
 ## 3.5 Do older, licensed movies (titles added to Netflix years after release) perform better in IMDb ratings than brand-new, same-year releases?
@@ -308,5 +413,64 @@ ggplot(country_data, aes(x = origin, y = imdb_rating, fill = origin)) +
 *Visualization: Box Plot or Density Plot — compare IMDb ratings between same-year releases and titles added significantly after their release year.*
 
 ```{r q10-licensed-vs-originals}
+# Calculate the gap between release year and the year added to Netflix
+licensing_data <- merged_data %>%
+  mutate(
+    year_added = as.numeric(format(as.Date(date_added, "%B %d, %Y"), "%Y")),
+    years_since_release = year_added - release_year
+  ) %>%
+  filter(!is.na(year_added), !is.na(release_year), !is.na(imdb_rating),
+         years_since_release >= 0) %>%   # drop a few bad rows where added date precedes release
+  mutate(
+    content_type = case_when(
+      years_since_release <= 1 ~ "Same-Year Release (Original)",
+      years_since_release >= 5 ~ "Licensed / Legacy (5+ yrs)",
+      TRUE ~ "Mid-Range (2-4 yrs)"
+    )
+  )
 
+# Averages by content type
+licensing_data %>%
+  group_by(content_type) %>%
+  summarize(
+    avg_rating = mean(imdb_rating, na.rm = TRUE),
+    count = n()
+  )
+
+# t-test comparing just the two extremes (originals vs licensed/legacy)
+t.test(imdb_rating ~ content_type,
+       data = licensing_data %>%
+         filter(content_type %in% c("Same-Year Release (Original)",
+                                    "Licensed / Legacy (5+ yrs)")))
+
+# Box plot comparing all three groups
+ggplot(licensing_data, aes(x = content_type, y = imdb_rating, fill = content_type)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.shape = 1) +
+  scale_fill_manual(values = c("Same-Year Release (Original)" = "olivedrab",
+                               "Mid-Range (2-4 yrs)" = "tan",
+                               "Licensed / Legacy (5+ yrs)" = "sienna")) +
+  labs(
+    title = "IMDb Ratings: Originals vs. Licensed / Legacy Content",
+    subtitle = "Grouped by years between release and addition to Netflix",
+    x = "Content Type",
+    y = "IMDb Rating"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Density plot showing the full shape of each distribution
+ggplot(licensing_data, aes(x = imdb_rating, fill = content_type)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Same-Year Release (Original)" = "olivedrab",
+                               "Mid-Range (2-4 yrs)" = "tan",
+                               "Licensed / Legacy (5+ yrs)" = "sienna")) +
+  labs(
+    title = "IMDb Rating Distribution by Licensing Group",
+    subtitle = "Density curves emphasize shape differences regardless of group size",
+    x = "IMDb Rating",
+    y = "Density",
+    fill = "Content Type"
+  ) +
+  theme_minimal()
 ```
+
