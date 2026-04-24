@@ -164,29 +164,23 @@ ggplot(trend_analysis, aes(x = year_added, y = avg_imdb_score)) +
 
 ```{r q3-movies-vs-shows}
 
-decade_analysis <- merged_data %>%
-  mutate(year_added = as.numeric(format(as.Date(date_added, "%B %d, %Y"), "%Y"))) %>%
-  filter(year_added >= 2012) %>%
-  group_by(year_added) %>%
-  summarize(
-    content_volume = n(),
-    avg_imdb_score = mean(imdb_rating)
-  )
+ggplot(merged_data, aes(x = type, y = imdb_rating, fill = type)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.shape = 1) +
 
-# bar chart with trend line
-
-ggplot(decade_analysis, aes(x = year_added, y = content_volume)) +
-  geom_col(fill = "olivedrab", alpha = 0.6) +
-  # Add the linear trend line to show the rate of expansion
-  geom_smooth(method = "lm", color = "sienna", se = FALSE, linetype = "solid") +
-  scale_x_continuous(breaks = seq(2012, 2022, 1)) +
+  scale_fill_manual(values = c("Movie" = "olivedrab", "TV Show" = "sienna")) +
   labs(
-    title = "Netflix Production Volume Expansion (2012-2022)",
-    subtitle = "Solid red line shows the linear growth trajectory of content library",
-    x = "Year Added",
-    y = "Number of Titles Added"
+    title = "IMDb Rating Distribution: Movies vs. TV Shows",
+    subtitle = "Comparing median and spread of quality across content types",
+    x = "Content Type",
+    y = "IMDb Rating"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# t-test
+# This confirms if the observed difference in means is statistically significant
+# t_test_result <- t.test(imdb_rating ~ type, data = merged_data)
+# print(t_test_result)
 
 ```
 
