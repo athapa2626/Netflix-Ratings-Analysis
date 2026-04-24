@@ -253,4 +253,6 @@ ggplot(plot_votes, aes(x = imdb_votes, fill = State)) +
        y = "Density") +
   theme(legend.position = "none")
 
+write.csv(merged_data, "Data/merged_data", row.names = FALSE)
+
 ```
