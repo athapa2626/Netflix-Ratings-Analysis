@@ -18,6 +18,8 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 library(knitr)
+
+# theme colors: olivedrab, sienna
 ```
 
 ```{r load-data, include=FALSE}
@@ -71,6 +73,50 @@ merged_data <- inner_join(netflix_unique, imdb_unique, by = c("title_clean", "re
 
 ```{r q1-volume-vs-quality}
 
+colnames(merged_data)
+sum(is.na(merged_data$imdb_rating))
+range(merged_data$release_year)
+
+# format year
+merged_data$year_added <- as.numeric(format(as.Date(merged_data$date_added, "%B %d, %Y"), "%Y"))
+
+# aggregate volume and average score per 'year added' cohort
+analysis_data <- merged_data %>%
+  filter(year_added >= 2014) %>%  #ADJUST THIS
+  group_by(year_added) %>%
+  summarize(
+    content_volume = n(),
+    avg_imdb_score = mean(imdb_rating)
+  )
+
+# Create Dual-Axis Line Chart
+scale_factor <- max(analysis_data$content_volume) / 10
+
+ggplot(analysis_data, aes(x = year_added)) +
+  # Bars for volume
+  geom_col(aes(y = content_volume, fill = "Content Volume"), alpha = 0.4) +
+  
+  # Line and Points for rating
+  geom_line(aes(y = avg_imdb_score * scale_factor, color = "Avg IMDb Score"), size = 1) +
+  geom_point(aes(y = avg_imdb_score * scale_factor, color = "Avg IMDb Score")) +
+  
+  # axis
+  scale_y_continuous(
+    name = "Total Content Volume",
+    sec.axis = sec_axis(~./scale_factor, name = "Average IMDb Score")
+  ) +
+  
+  # color setting
+  scale_fill_manual(values = c("Content Volume" = "olivedrab")) +
+  scale_color_manual(values = c("Avg IMDb Score" = "sienna")) +
+  labs(
+    title = "Platform Growth vs. Content Quality (by Year Added)",
+    x = "Year Added to Platform",
+    fill = "Metric", color = "Metric"
+  ) +
+  theme_minimal()
+
+
 ```
 
 ## 1.2 Has the average IMDb rating of Netflix's content increased or decreased over the last decade as their production volume rapidly expanded?
@@ -78,6 +124,34 @@ merged_data <- inner_join(netflix_unique, imdb_unique, by = c("title_clean", "re
 *Visualization: Time Series Line Chart — `geom_line()` + `geom_smooth(method = "lm")` to show the overall slope of IMDb ratings by year.*
 
 ```{r q2-rating-trend-over-time}
+
+# Extract year and filter for years >= 2012
+trend_analysis <- merged_data %>%
+  mutate(year_added = as.numeric(format(as.Date(date_added, "%B %d, %Y"), "%Y"))) %>%
+  filter(year_added >= 2012) %>%
+  group_by(year_added) %>%
+  summarize(
+    avg_imdb_score = mean(imdb_rating)
+  )
+
+# Time series line chart with trend line
+
+ggplot(trend_analysis, aes(x = year_added, y = avg_imdb_score)) +
+  # Actual yearly averages
+  
+  geom_line(color = "olivedrab", size = 1) +
+  geom_point(color = "olivedrab") +
+  # Statistical trend line (Linear Model)
+  geom_smooth(method = "lm", color = "sienna", linetype = "dashed", se = FALSE) +
+
+  scale_x_continuous(breaks = seq(2012, 2022, 1)) +
+  labs(
+    title = "Average IMDb Rating Trend (Last Decade)",
+    subtitle = "Red dashed line indicates the overall linear slope of quality",
+    x = "Year Added to Netflix",
+    y = "Average IMDb Score"
+  ) +
+  theme_minimal()
 
 ```
 
@@ -90,6 +164,30 @@ merged_data <- inner_join(netflix_unique, imdb_unique, by = c("title_clean", "re
 *Visualization: Box Plot or Violin Plot — `geom_boxplot(aes(x = type, y = imdb_rating))` to show median and spread (IQR) by content type.*
 
 ```{r q3-movies-vs-shows}
+
+decade_analysis <- merged_data %>%
+  mutate(year_added = as.numeric(format(as.Date(date_added, "%B %d, %Y"), "%Y"))) %>%
+  filter(year_added >= 2012) %>%
+  group_by(year_added) %>%
+  summarize(
+    content_volume = n(),
+    avg_imdb_score = mean(imdb_rating)
+  )
+
+# bar chart with trend line
+
+ggplot(decade_analysis, aes(x = year_added, y = content_volume)) +
+  geom_col(fill = "olivedrab", alpha = 0.6) +
+  # Add the linear trend line to show the rate of expansion
+  geom_smooth(method = "lm", color = "sienna", se = FALSE, linetype = "solid") +
+  scale_x_continuous(breaks = seq(2012, 2022, 1)) +
+  labs(
+    title = "Netflix Production Volume Expansion (2012-2022)",
+    subtitle = "Solid red line shows the linear growth trajectory of content library",
+    x = "Year Added",
+    y = "Number of Titles Added"
+  ) +
+  theme_minimal()
 
 ```
 
